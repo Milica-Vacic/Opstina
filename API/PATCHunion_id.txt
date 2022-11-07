@@ -1,0 +1,97 @@
+let userId = session('id')
+let isAdmin = session('admin')
+let id = param('id')
+let udruzenje = param('unionId',null) //OVDE TREEBA UNION NAME??
+
+if (isAdmin)
+    util.adminCheck(userId,isAdmin)
+
+if (!isAdmin){
+    util.unionCheck(userId,isAdmin)
+    if (userId!=id) {
+        write('res','err')
+        write('msg','Немате приступ подацима')
+        exit()
+    }
+}
+
+let oldPassword = param('oldPassword')
+let newPassword = param('newPassword')
+let status = param('status')
+
+if (status && status!=='активан' && status!=='обрисан'){
+    write('res', 'err')
+    write('msg', 'Неисправан унос за статус')
+    exit()
+}
+
+// menjanje sifre
+function changePassword(){
+    let sqlGetOldPass = `SELECT udr_lozinka FROM udruzenja WHERE udr_id = ?`
+    let getOldPass = db.query(sqlGetOldPass, userId)[0].udr_lozinka
+
+    let checkOldPass = bcrypt(oldPassword, getOldPass)
+
+    if(checkOldPass==false){
+        write('err', 'Стара лозинка је неисправна')
+        exit();
+    }
+    if(oldPassword==newPassword){
+        write('err', 'Лозинке се поклапају')
+        exit();
+    }
+
+    let sqlUpdatePass = `UPDATE udruzenja SET udr_lozinka = ? WHERE udr_id = ?`
+    let newPassHash = bcrypt(newPassword)
+    try{
+        db.query(sqlUpdatePass, newPassHash, id)
+    }
+    catch(e){
+        write('res','err')
+        write('msg','SQL error')
+        write('err',e)
+        exit()
+    }
+    write('res', 'ok');
+}
+
+
+
+// ako je admin moze da menja sve, ako nije samo sifru
+if(isAdmin){
+    if (util.allNullChk([udruzenje,status])){
+        write('res', 'ok')
+        exit()
+    }
+
+    let qbUpdate = db.update('udruzenja').where('udr_id',id)
+    if (udruzenje) {
+        let nameCheck = db.select('udr_id').from('udruzenja').where('udr_ime',udruzenje).where('udr_status','<>','обрисан').toSql()
+        let duplicateId = db.query(nameCheck)
+        if (duplicateId.rows>0 && duplicateId[0].udr_id!=id){
+            write('res','err')
+            write('msg','Удружење већ постоји')
+            exit()
+        }
+        qbUpdate.set('udr_ime',udruzenje)
+    }
+    if (status){
+        qbUpdate.set('udr_status',status)
+    }
+    
+    try{
+        db.query(qbUpdate.toSql())
+    }
+    catch(e){
+        write('res','err')
+        write('msg','SQL error')
+        write('err',e)
+        exit()
+    }
+    write('res','ok')
+    exit()
+}
+
+
+
+if (!isAdmin) changePassword()

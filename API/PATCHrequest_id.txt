@@ -1,0 +1,140 @@
+let userId = session('id')
+let isAdmin = session('admin')
+util.adminCheck(userId,isAdmin)
+let id = param('id')
+let errMsg = null
+let status = param('status', util.requiredParam)
+
+if (status!=='прихваћено' && status!=='одбијено'){
+    write('res', 'err')
+    write('msg', 'Неисправан унос')
+    exit()
+}
+
+
+let reqCheck = db.select('zah_status, zah_suma, zah_licno, stv_id')
+    .from('zahtevi').where('zah_id',id).toSql()
+let request
+try{
+request = db.query(reqCheck)
+}
+catch(e){
+    write('res','err')
+    write('msg','SQL error')
+    write('err', e);
+    exit()
+}
+
+if (request.rows===0){
+    write('res', 'err')
+    write('msg', 'Захтев није пронађен')
+    exit()
+}
+request=request[0]
+
+if (request.zah_status==status){
+    write('res', 'err')
+    write('msg', 'Захтев већ има задати статус')
+    exit()
+}
+
+if (status==="одбијено"){
+    errMsg=param('errMsg',util.requiredParam)
+    if (request.zah_status=="прихваћено"){
+        let slcLabel = db.select('stv_potroseno, stv_licno').from('stavke').where('stv_id', request.stv_id).toSql()
+        let label = db.query(slcLabel)
+        if (label.rows===0){
+            write('res', 'err')
+            write('msg', 'Ставка није пронађена')
+            exit()
+        }
+        label=label[0]
+        let setLabel = db.update('stavke').set('stv_potroseno',label.stv_potroseno-request.zah_suma)
+        .set('stv_licno',label.stv_licno-request.zah_licno).where('stv_id',request.stv_id).toSql()
+        try{
+            db.query(setLabel)
+        }
+        catch(e){
+            write('res','err')
+            write('msg','SQL error')
+            write('err', e);
+            exit()
+        }
+
+    }
+}
+
+
+if (status==="прихваћено"){
+    let slcLabel = db.select('stv_potroseno, stv_licno').from('stavke').where('stv_id', request.stv_id).toSql()
+    let label = db.query(slcLabel)
+    if (label.rows===0){
+        write('res', 'err')
+        write('msg', 'Ставка није пронађена')
+        exit()
+    }
+    label=label[0]
+    let setLabel = db.update('stavke').set('stv_potroseno',request.zah_suma+label.stv_potroseno)
+    .set('stv_licno',request.zah_licno+label.stv_licno).where('stv_id',request.stv_id).toSql()
+    try{
+        db.query(setLabel)
+    }
+    catch(e){
+        write('res','err')
+        write('msg','SQL error')
+        write('err', e);
+        exit()
+    }
+}
+
+
+// if (status==="прихваћено" && request.zah_status=='лично'){
+//     let label = null
+//     if (request.stv_id!=null){
+//         let slcLabel = db.select('stv_kategorija').from('stavke').where('stv_id', request.stv_id).toSql()
+//         label = db.query(slcLabel)
+//         if (label.rows===0){
+//             write('res', 'err')
+//             write('msg', 'Ставка није пронађена')
+//             exit()
+//         }
+//         label = label[0]
+//     }
+//     write (request.stv_kategorija)
+//     let insLabel = db.insert('stavke').set('parent_id',request.stv_id).set('stv_ime',request.stv_ime)
+//     .set('stv_dobijeno',0)
+//     .set('stv_kategorija',(label===null?request.stv_kategorija:label.stv_kategorija))
+//     .set('stv_potroseno',request.zah_suma)
+//     .set('pro_id',request.pro_id)
+//     .set('stv_licno',request.zah_licno).toSql()
+//     try{
+//         db.query(insLabel)
+//     }
+//     catch(e){
+//         write('res','err')
+//         write('msg','SQL error')
+//         write('err', e);
+//         exit()
+//     }
+// }
+
+
+
+let updateQb = db.update('zahtevi').set('zah_status',status).where('zah_id',id)
+if (errMsg) updateQb.set("zah_error",errMsg)
+
+try{
+db.query(updateQb.toSql())
+}
+catch(e){
+    write('res','err')
+    write('msg','SQL error')
+    write('err', e);
+    exit()
+}
+
+write('res','ok')
+
+
+
+

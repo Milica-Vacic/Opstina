@@ -1,0 +1,58 @@
+let userId = session('id')
+let isAdmin = session('admin')
+let proId = param('project',null)
+let link = 'http://125k122.e2.mars-hosting.com/API/img/'
+let pending = param('pending', false)
+proId=JSON.parse(proId)
+
+if (isAdmin)
+    util.adminCheck(userId,isAdmin)
+
+if (!isAdmin && !proId){
+    write('res','err')
+    write('msg','Немате приступ подацима')
+    exit()
+}
+
+if (!isAdmin){
+    util.unionCheck(userId,isAdmin)
+    let proCheck = db.select('pro_id').from('projekti')
+        .where('udr_id',userId)
+    if (proId!=null && proId!="") proCheck.where('pro_id',proId)
+    let check = db.query(proCheck.toSql())
+    if (check.rows===0) {
+        write('res','err')
+        write('msg','Немате приступ подацима')
+        exit()
+    }
+}
+
+let qbRequests = db.select(`z.zah_racun_datum, z.zah_racun_broj, z.zah_izvod_broj, z.zah_id, z.zah_status, z.zah_error, z.zah_datum, CONCAT('${link}', z.zah_racun) AS img_racun,
+CONCAT('${link}', z.zah_izvod) AS img_izvod, z.zah_licno, z.stv_id, z.stv_kategorija, z.stv_ime, s.stv_ime as parent, p.pro_ime, u.udr_ime`)
+.from('zahtevi_licno z')
+.leftJoin('stavke s','z.stv_id=s.stv_id')
+.innerJoin('projekti p','p.pro_id=z.pro_id')
+.innerJoin('udruzenja u','u.udr_id=p.udr_id')
+.orderBy('z.zah_datum DESC')
+if(pending) qbRequests.where('z.zah_status', 'необрађено')
+if (proId) qbRequests.where('p.pro_id',proId)
+
+let res
+try{
+    res = db.query(qbRequests.toSql())
+}
+catch(e){
+    write('res','err')
+    write('msg',"SQL error")
+    write('err', e);
+    exit();
+}
+
+// if (res.rows===0){
+//     write('res','err')
+//     write('msg',"Ни један захтев није пронађен")
+//     exit();
+// }
+
+write('data',res)
+write('res','ok')

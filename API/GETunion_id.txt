@@ -1,0 +1,39 @@
+let userId = session('id')
+let isAdmin = session('admin')
+let id = param('id')
+let completed = param('completed', false)
+
+if (isAdmin)
+    util.adminCheck(userId,isAdmin)
+
+if (!isAdmin){
+    util.unionCheck(userId,isAdmin)
+    if (userId!=id) {
+        write('res','err')
+        write('msg','Немате приступ подацима')
+        exit()
+    }
+}
+
+// db.select('pro_id').from('projekti')
+// `SELECT pro_id, pro_ime, pro_datum FROM projekti WHERE udr_id = ?`
+let sqlUnionObject = db.select(`udr_id, udr_ime, udr_email, udr_mat_br, udr_pib, udr_ziro`).from(`udruzenja`)
+    .where(`udr_id`, id).where('udr_status','<>','обрисан')
+let unionObject = db.query(sqlUnionObject.toSql())[0]
+if (unionObject==null) {
+        write('res','err')
+        write('msg','Удружење није пронађено')
+        exit()
+}
+
+let sqlProjectsOfSingleUnion = db.select(`pro_id, pro_ime, pro_datum, pro_status, udr_id, pro_br_ugovora`)
+                                .from(`projekti`)
+                                .where(`udr_id`, id)
+                                .where('pro_status','<>','обрисан')
+                                .orderBy("pro_status ASC", "pro_datum DESC")
+if (!completed) sqlProjectsOfSingleUnion.where('pro_status','активан')
+
+let projectsOfSingleUnion = db.query(sqlProjectsOfSingleUnion.toSql())
+
+write('union', unionObject);
+write('projects', projectsOfSingleUnion);

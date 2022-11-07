@@ -1,0 +1,36 @@
+let userId = session('id')
+let isAdmin = session('admin')
+let completed = param('completed', false)
+let filter= param('filter',null)
+util.adminCheck(userId,isAdmin)
+
+let sqlProjects = db.select(`p.pro_id, p.pro_ime, p.pro_datum, p.pro_status, p.udr_id, u.udr_ime, p.pro_br_ugovora`)
+                .from(`projekti p`)
+                .innerJoin(`udruzenja u`, 'p.udr_id = u.udr_id').orderBy("pro_datum DESC");
+
+if(completed=='true'){
+    sqlProjects.where('p.pro_status', 'завршен')
+} else {
+    sqlProjects.where('p.pro_status', 'активан')
+}
+if (filter!==null)
+        sqlProjects.where(`p.pro_ime LIKE CONCAT('%','${filter}', '%')`)
+let res
+try{
+    res = db.query(sqlProjects.toSql())
+}
+catch(e){
+    write('res','err')
+    write('msg',"SQL error")
+    write('err', e);
+    exit();
+}
+
+// if (res.rows===0){
+//     write('res', 'err')
+//     write('msg', 'Пројекти нису пронађени')
+//     exit()
+// }
+
+write('res', 'ok')
+write('data', res)

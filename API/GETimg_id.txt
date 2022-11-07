@@ -1,0 +1,26 @@
+let img_id = param('id',util.requiredParam);
+
+let q = 'SELECT sli_slika FROM slike WHERE sli_id=?'
+let res
+try {
+    res = db.query(q,img_id)
+}
+catch(e){
+write('res', 'err');
+write('msg', 'SQL error')
+write('err', e)
+exit();
+}
+
+if (res.rows===0) {
+write('res', 'err');
+write('msg', 'Слика није пронађена')
+exit();
+}
+
+let image=res[0]
+let mime = 'image/jpeg'
+
+response.setContentType(mime);
+response.setCache('1Y')
+write(image.sli_slika);

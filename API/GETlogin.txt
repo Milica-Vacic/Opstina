@@ -1,0 +1,9 @@
+let userId = session('id');
+
+if (!userId) {
+    write('res','err')
+    write('msg', 'Нисте улоговани');
+    exit();
+}
+session.close();
+write('res','ok')

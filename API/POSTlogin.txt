@@ -1,0 +1,50 @@
+let email = param('email')
+let pass = param('pass')
+
+
+let sqlNameCheck = db.select('*').from('admini').where('adm_email',email).toSql()
+let res = db.query(sqlNameCheck)
+
+if (res.rows>0) {
+    let passCheck = bcrypt(pass,res[0].adm_lozinka)
+    if (!passCheck) {
+        write('res','err')
+        write('msg', 'Нетачан имејл или лозинка')
+        exit()
+    }
+    let sid = session()
+    session('id', res[0].adm_id)
+    session('admin', true)
+    write('admin', true)
+    write('sid',sid)
+    write('id', res[0].adm_id)
+    write('res','ok')
+    exit()
+}
+
+sqlNameCheck = `SELECT * FROM udruzenja WHERE udr_email=? and udr_status <> 'обрисан'`
+res = db.query(sqlNameCheck,email)
+
+if (res.rows>0) {
+    let passCheck = bcrypt(pass,res[0].udr_lozinka)
+    if (!passCheck) {
+        write('res','err')
+        write('msg', 'Нетачан имејл или лозинка')
+        exit()
+    }
+    let slcProjects = db.select('pro_id').from('projekti').where('udr_id',res[0].udr_id).where('pro_status',"активан").toSql()
+    let projects = db.query(slcProjects)
+    let sid = session()
+    session('id', res[0].udr_id)
+    session('admin', false)
+    write('admin', false)
+    write('sid',sid)
+    write('projects', projects);
+    write('id',res[0].udr_id)
+    write('res','ok')
+    exit()
+}
+
+write('res','err')
+write('msg', 'Нетачан имејл или лозинка')
+exit()

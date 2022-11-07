@@ -1,0 +1,76 @@
+let userId = session('id')
+let isAdmin = session('admin')
+let id = param('id')
+let name = param('name',null)
+let status = param('status',null)
+
+if (isAdmin){
+    util.adminCheck(userId,isAdmin)
+}
+
+if (!isAdmin){
+    util.unionCheck(userId,isAdmin)
+    if (userId!=id) {
+        write('res','err')
+        write('msg','Немате приступ подацима')
+        exit()
+    }
+}
+
+if (status && status!=='активан' && status!=='завршен' && status!=='обрисан'){
+    write('res', 'err')
+    write('msg', 'Неисправан унос за статус')
+    exit()
+}
+
+
+if (util.allNullChk([name,status])){
+    write('res','ok')
+    exit()
+}
+
+let sqlProject = db.select('pro_datum, udr_id, pro_status').from('projekti').where('pro_id',id).toSql()
+let res = db.query(sqlProject)
+if (res.rows===0){
+    write('res','err')
+    write('msg','Пројекат није пронађен')
+    exit()
+}
+
+let checkDate = new Date(res[0].pro_datum)
+
+let qbUpdate = db.update('projekti').where('pro_id',id)
+if (name) {
+    let sqlCheck = db.select('pro_id').from('projekti')
+    .where('pro_ime',name)
+    .where(`year(pro_datum)=${checkDate.getFullYear()}`).where('udr_id',res[0].udr_id).toSql()
+    let check = db.query(sqlCheck)
+    if (check.rows>0 && check[0].pro_id!=id){
+        write('res','err')
+        write('msg','Пројекат са тим именом већ постоји')
+        exit()
+    }
+    qbUpdate.set('pro_ime',name)
+}
+
+if (status){
+    if (status=='обрисан' && res[0].pro_status!='завршен'){
+        write('res','err')
+        write('msg','Не можете обрисати незавршен пројекат')
+        exit()
+    }
+    qbUpdate.set('pro_status',status)
+}
+
+try{
+    db.query(qbUpdate.toSql())
+}
+catch(e){
+    write('res','err')
+    write('msg','SQL error')
+    write('err',e)
+    exit()
+}
+
+write('res','ok')
+

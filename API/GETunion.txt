@@ -1,0 +1,26 @@
+let userId = session('id')
+let isAdmin = session('admin')
+let filter= param('filter',null)
+
+util.adminCheck(userId, isAdmin)
+
+let sqlGetUnions = db.select(`udr_id, udr_ime, udr_email, udr_datum, udr_mat_br, udr_pib, udr_ziro, udr_status`).from('udruzenja u')
+.orderBy("udr_datum DESC").where('u.udr_status','<>','обрисан');
+
+if (filter){
+    sqlGetUnions.where(`udr_ime LIKE CONCAT('%','${filter}', '%')`)
+}
+
+let res
+try{
+   res = db.query(sqlGetUnions.toSql())
+}
+catch(e){
+write('res', 'err')
+write('msg', "SQL error");
+write('err', e)
+exit()
+}
+
+write('res', 'ok')
+write('data', res);

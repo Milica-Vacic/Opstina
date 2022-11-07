@@ -1,0 +1,84 @@
+// let userId = session('id')
+// let isAdmin = session('admin')
+// util.unionCheck(userId,isAdmin)
+
+// let racun = param('racunSlika',util.requiredParam)
+// let izvod = param('izvodSlika',util.requiredParam)
+// let racBr =param('racunBroj',util.requiredParam)
+// let izvodBr = param('izvodBroj',util.requiredParam)
+// let stavkaId = param('stavkaId',null)
+// let stavkaKat = param('kategorija',util.requiredParam)
+// let stvIme = param('ime',util.requiredParam)
+// let personal = param('licno',util.requiredParam)
+// let proId = param('proId',util.requiredParam)
+// let racDatum = param('racunDatum',util.requiredParam)
+// let date = new Date()
+
+// if(racun==null || izvod==null){
+//     write('err', 'Пошаљите обе слике');
+//     exit();
+// }
+
+// if (racun.size>400000 || izvod.size>400000){
+//     write('res', 'err');
+//     write('msg', 'Слике заузимају превише меморије')
+//     exit();
+// }
+
+// if (!Date.parse(racDatum)){
+//     write('res','err')
+//     write('msg',"Неисправан унос за датум рачуна")
+//     exit(); 
+// }
+
+// let sqlCheck = db.select('s.stv_dobijeno').from('projekti p')
+// .innerJoin('stavke s','s.pro_id=p.pro_id')
+// .where('p.pro_id',proId).where('p.udr_id',userId)
+
+// if (stavkaId)
+//     sqlCheck.where('s.stv_id',stavkaId).where('s.stv_kategorija',stavkaKat)
+
+// let check= db.query(sqlCheck.toSql())
+// if (check.rows===0){
+//     write('res','err')
+//     write('msg',"Циљни пројекат није пронађен или се захтев не уклапа у његову хијерархију")
+//     exit();
+// }
+// if (check[0].stv_dobijeno){
+//     write('res','err')
+//     write('msg',"Невалидна родитељска ставка")
+//     exit();
+// }
+
+
+// let sqlImg = 'INSERT INTO slike (sli_slika) VALUES (?)'
+// let racunId
+// let izvodId
+// try{
+//     racunId=db.query(sqlImg, racun.data)[0].id
+//     izvodId=db.query(sqlImg, izvod.data)[0].id
+// }
+// catch(e){
+//     write('res','err')
+//     write('msg',"SQL error")
+//     write('err', e);
+//     exit();
+// }
+
+
+// let sqlNewRequest = db.insert('zahtevi_licno').set('zah_datum',date).set('zah_racun',racunId)
+// .set('zah_izvod',izvodId).set('stv_id',stavkaId).set('zah_licno',personal)
+// .set('stv_ime',stvIme).set('pro_id',proId).set('stv_kategorija',stavkaKat)
+// .set('zah_racun_broj',racBr).set('zah_izvod_broj',izvodBr).set('zah_racun_datum',racDatum)
+
+// try{
+// db.query(sqlNewRequest.toSql())
+// }
+// catch(e){
+//     write('res','err')
+//     write('msg','SQL error')
+//     write('err', e);
+//     exit()
+// }
+
+// write('res','ok')

@@ -1,0 +1,106 @@
+let userId = session('id')
+let isAdmin = session('admin')
+let id = param('id')
+let link = 'http://125k122.e2.mars-hosting.com/API/img/'
+
+if (isAdmin)
+    util.adminCheck(userId,isAdmin)
+
+let sqlProject = db.select(`pro_id, pro_ime, pro_datum, p.udr_id, u.udr_ime,
+null as zahtevi, null as zahtevi_licno,
+null as cat1, null as cat2, null as cat3, null as cat4, p.pro_br_ugovora`)
+.from('projekti p').innerJoin('udruzenja u','p.udr_id=u.udr_id')
+.where('pro_id',id).where('pro_status','<>','обрисан').toSql()
+let project = db.query(sqlProject)
+
+if (project.rows===0){
+        write('res','err')
+        write('msg','Пројектат није пронађен')
+        exit()
+}
+
+if (!isAdmin){
+    util.unionCheck(userId,isAdmin)
+    if (userId!=project[0].udr_id) {
+        write('res','err')
+        write('msg','Немате приступ подацима')
+        exit()
+    }
+}
+
+function getCategory (catIndex,parentId,parentObject){
+    let sqlCat = db.select(`stv_id, parent_id, stv_ime, stv_kategorija, stv_dobijeno, stv_potroseno, stv_licno, null as children`)
+    .from('stavke')
+    .where('pro_id',id)
+    .where('stv_kategorija',catIndex)
+    .where('parent_id',parentId).toSql()
+
+    let level
+    try{
+        level = db.query(sqlCat)
+    }
+    catch(e){
+        write('res','err')
+        write('msg','SQL errorr')
+        write('err',e)
+        exit()
+    }
+
+    if (level.rows>0){
+        for (let row of level){
+            getCategory(catIndex,row.stv_id,row)
+        }
+    }
+
+    parentObject.children = level
+}
+
+let cat1 = {}
+getCategory(1,null,cat1)
+
+let cat2 = {}
+getCategory(2,null,cat2)
+
+let cat3 = {}
+getCategory(3,null,cat3)
+
+let cat4 = {}
+getCategory(4,null,cat4)
+
+let sqlReq = db.select(`z.zah_racun_datum, z.zah_racun_broj, z.zah_izvod_broj, z.zah_id, z.zah_status, z.zah_error, z.zah_datum,
+concat('[',(select (group_concat(DISTINCT '"','${link}',sl.sli_id,'"' ORDER BY sl.sli_id ASC)) from slike sl where sl.zah_id=z.zah_id and sl.sli_tip='рачун'),']') as racun_links,
+concat('[',(select (group_concat(DISTINCT '"','${link}',sl.sli_id,'"' ORDER BY sl.sli_id ASC)) from slike sl where sl.zah_id=z.zah_id and sl.sli_tip='извод'),']') as izvod_links,
+z.zah_suma, z.zah_licno, z.stv_id, s.stv_ime, s.stv_dobijeno, s.stv_potroseno, s.stv_licno, p.pro_ime, u.udr_ime`)
+.from('zahtevi z')
+.innerJoin('stavke s','z.stv_id=s.stv_id')
+.innerJoin('projekti p','p.pro_id=s.pro_id')
+.innerJoin('udruzenja u','u.udr_id=p.udr_id')
+.where('p.pro_id',id)
+.orderBy('z.zah_datum DESC').toSql()
+let zahtevi = db.query(sqlReq)
+
+
+let sqlPersonal = db.select(`z.zah_racun_datum, z.zah_racun_broj, z.zah_izvod_broj, z.zah_id, z.zah_status, z.zah_error, z.zah_datum, CONCAT('${link}', z.zah_racun) AS img_racun,
+CONCAT('${link}', z.zah_izvod) AS img_izvod, z.zah_licno, z.stv_id, z.stv_kategorija, z.stv_ime, s.stv_ime as parent, p.pro_ime, u.udr_ime`)
+.from('zahtevi_licno z')
+.leftJoin('stavke s','z.stv_id=s.stv_id')
+.innerJoin('projekti p','p.pro_id=z.pro_id')
+.innerJoin('udruzenja u','u.udr_id=p.udr_id')
+.where('p.pro_id',id)
+.orderBy('z.zah_datum DESC').toSql()
+let licno = db.query(sqlPersonal)
+
+
+for (let row of project){
+    row.cat1=cat1.children
+    row.cat2=cat2.children
+    row.cat3=cat3.children
+    row.cat4=cat4.children
+    row.zahtevi=zahtevi
+    row.zahtevi_licno=licno
+}
+
+
+write ('res','ok')
+write ('data',project[0])
+

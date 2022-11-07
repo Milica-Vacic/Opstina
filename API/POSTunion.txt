@@ -1,0 +1,68 @@
+let userId = session('id')
+let isAdmin = session('admin')
+
+util.adminCheck(userId, isAdmin)
+
+let unionName = param('unionName', util.requiredParam)
+let unionEmail = param('unionEmail', util.requiredParam)
+let unionPass = param('unionPass',util.requiredParam)
+let unionMatNum = param('unionMatNum',util.requiredParam)
+let unionTin = param('unionTin',util.requiredParam)
+let unionAccNum = param('unionAccNum',util.requiredParam)
+
+let nameCheck = db.select('udr_id').from('udruzenja').where('udr_ime',unionName).where('udr_status','<>','обрисан').toSql()
+let res = db.query(nameCheck)
+if (res.rows>0){
+    write('res', 'err')
+    write('msg', "Удружење већ постоји");
+    exit()
+}
+
+let emailCheck = db.select('udr_id').from('udruzenja').where('udr_email',unionEmail).where('udr_status','<>','обрисан').toSql()
+res = db.query(emailCheck)
+if (res.rows>0){
+    write('res', 'err')
+    write('msg', "Имејл је већ у употреби");
+    exit()
+}
+
+let matNumCheck = db.select('udr_id').from('udruzenja').where('udr_mat_br',unionMatNum).where('udr_status','<>','обрисан').toSql()
+res = db.query(matNumCheck)
+if (res.rows>0){
+    write('res', 'err')
+    write('msg', "Матични број удружења је већ у употреби");
+    exit()
+}
+
+let tinCheck = db.select('udr_id').from('udruzenja').where('udr_pib',unionTin).where('udr_status','<>','обрисан').toSql()
+res = db.query(tinCheck)
+if (res.rows>0){
+    write('res', 'err')
+    write('msg', "ПИБ је већ у употреби");
+    exit()
+}
+
+let accNumCheck = db.select('udr_id').from('udruzenja').where('udr_ziro',unionAccNum).where('udr_status','<>','обрисан').toSql()
+res = db.query(accNumCheck)
+if (res.rows>0){
+    write('res', 'err')
+    write('msg', "Жиро рачун је већ у употреби");
+    exit()
+}
+
+let hashedPass = bcrypt(unionPass)
+// write('key', hashedPass);
+
+let date = new Date()
+let sqlNewUnion = `INSERT INTO udruzenja (udr_ime, udr_email, udr_lozinka, udr_datum, udr_mat_br, udr_pib, udr_ziro) VALUES (?, ?, ?, ?, ?, ?, ?)`
+try{
+    db.query(sqlNewUnion, unionName, unionEmail, hashedPass, date, unionMatNum, unionTin, unionAccNum)
+}
+catch(e){
+write('res', 'err')
+write('msg', "SQL error");
+write('err', e)
+exit()
+}
+
+write('res', 'ok')

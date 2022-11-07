@@ -1,0 +1,6 @@
+let userId = session('id')
+let isAdmin = session('admin')
+let admin = util.adminCheck(userId,isAdmin)
+write ('res','ok')
+write ('data',admin)
+

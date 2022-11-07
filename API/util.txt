@@ -1,0 +1,63 @@
+shared.util = {
+    requiredParam: (name) => {
+        write('res', 'err')
+        write('msg',`Недостаје параметар ${name}`)
+        exit()
+    },
+
+    unionCheck: function (id,admin){
+        if (!id) {
+            write('res', 'err')
+            write('msg', 'Нисте улоговани')
+            exit()
+        }
+
+        if (admin) {
+            write('res', 'err')
+            write('msg', 'Администратор не може бити обичан корисник')
+            exit()
+        }
+
+        let sqlGetUser = 'SELECT * FROM udruzenja WHERE udr_id=?'
+        let res = db.query(sqlGetUser,id)
+
+        if (res.rows===0) {
+            write('res','err')
+            write('msg', 'Удружење није пронађено')
+            exit()
+        }
+    },
+
+    adminCheck: function (id,admin){
+        if (!id) {
+            write('res', 'err')
+            write('msg', 'Нисте улоговани')
+            exit()
+        }
+
+        if (!admin) {
+            write('res', 'err')
+            write('msg', 'Немате администраторска права')
+            exit()
+        }
+
+        let sqlGetUser = 'SELECT * FROM admini WHERE adm_id=?'
+        let res = db.query(sqlGetUser,id)
+
+        if (res.rows===0) {
+            write('res','err')
+            write('msg', 'Администратор није пронађен')
+            exit()
+        }
+
+        return res[0]
+    },
+
+    allNullChk: function(arr){
+        let stop=true
+        for (let item of arr){
+            if (item!==null) stop=false
+        }
+        return stop
+    }
+}

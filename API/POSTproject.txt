@@ -1,0 +1,69 @@
+let userId = session('id')
+let isAdmin = session('admin')
+util.adminCheck(userId,isAdmin)
+let labelsData = param("labelsData",util.requiredParam);
+
+function insertProjectLabels(parentObject, parentId, category, projectId){
+    let spentSum=null;
+    let spentPersonal=null;
+    if(parentObject.sum){
+        spentSum=0;
+        spentPersonal=0;
+    }
+    let sql = `INSERT INTO stavke 
+                    (stv_ime, parent_id, stv_kategorija, stv_dobijeno, stv_potroseno, stv_licno, pro_id) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        let sqlRes= db.query(sql, parentObject.name, parentId, category, parentObject.sum, spentSum, spentPersonal, projectId);
+        parentId=sqlRes[0].id
+    for(let i=0; i<parentObject.data.length; i++){
+        insertProjectLabels(parentObject.data[i], parentId, category, projectId)
+    }
+}
+
+let projectName = param("projectName",util.requiredParam)
+let unionId = param("unionId",util.requiredParam)
+let projectContractNum = param("projectContractNum",util.requiredParam)
+
+
+let date = new Date()
+let sqlCheck = db.select('pro_id').from('projekti')
+.where('pro_ime',projectName).where(`year(pro_datum)=${date.getFullYear()}`).where('udr_id',unionId).toSql()
+
+let res = db.query(sqlCheck)
+
+if (res.rows>0){
+    write('res','err')
+    write('msg','Истоимени пројекат већ постоји за текућу годину')
+    exit()
+}
+
+let contractNumCheck = db.select('pro_id').from('projekti').where('pro_br_ugovora',projectContractNum).toSql()
+res = db.query(contractNumCheck)
+if (res.rows>0){
+    write('res', 'err')
+    write('msg', "Пројекат са задатим бројем уговора бећ постоји");
+    exit()
+}
+
+
+let sql = `INSERT INTO projekti (pro_ime, pro_datum, udr_id, pro_br_ugovora) VALUES (?, ?, ?, ?)`
+
+try{
+    let sqlRes = db.query(sql, projectName, date, unionId, projectContractNum)
+    for(let i=0; i<4; i++){
+        for(let j=0; j<labelsData[i].data.length; j++){
+            insertProjectLabels(labelsData[i].data[j], null, i+1, sqlRes[0].id)
+        }
+    }
+}
+catch(e){
+write('res','err')
+write('msg','SQL error')
+write('err', e)
+exit()
+}
+
+
+write("res", "ok");
+
+

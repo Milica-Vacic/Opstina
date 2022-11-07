@@ -1,0 +1,161 @@
+let userId = session('id')
+let isAdmin = session('admin')
+util.unionCheck(userId,isAdmin)
+
+let racun = param('racunSlika',util.requiredParam)
+let izvod = param('izvodSlika',util.requiredParam)
+let racBr =param('racunBroj',util.requiredParam)
+let izvodBr = param('izvodBroj',util.requiredParam)
+let stavkaId = param('stavkaId',util.requiredParam)
+let funded = param('opstinsko',util.requiredParam)
+let personal = param('licno',null)
+let racDatum = param('racunDatum',util.requiredParam)
+let date = new Date()
+
+if (!Date.parse(racDatum)){
+    write('res','err')
+    write('msg',"Неисправан унос за датум рачуна")
+    exit(); 
+}
+
+let sqlCheck = db.select('s.stv_dobijeno').from('stavke s')
+.innerJoin('projekti p','p.pro_id=s.pro_id')
+.where('s.stv_id',stavkaId).where('p.udr_id',userId).toSql()
+
+let check= db.query(sqlCheck)
+if (check.rows===0){
+    write('res','err')
+    write('msg',"Циљна ставка није пронађена")
+    exit();
+}
+if (!check[0].stv_dobijeno && check[0].stv_dobijeno!==0){
+    write('res','err')
+    write('msg',"Невалидна циљна ставка")
+    exit();
+}
+
+
+if(racun==null || izvod==null){
+    write('err', 'Пошаљите слике за рачун и извод из банке');
+    exit();
+}
+
+if (racun.size>400000 || izvod.size>400000){
+    write('res', 'err');
+    write('msg', 'Слике заузимају превише меморије')
+    exit();
+}
+
+// let sqlImg = 'INSERT INTO slike (sli_slika) VALUES (?)'
+// let racunId
+// let izvodId
+// try{
+//     racunId=db.query(sqlImg, racun.data)[0].id
+//     izvodId=db.query(sqlImg, izvod.data)[0].id
+// }
+// catch(e){
+//     write('res','err')
+//     write('msg',"SQL error")
+//     write('err', e);
+//     exit();
+// }
+
+
+let sqlNewRequest = db.insert('zahtevi').set('zah_datum',date)
+.set('stv_id',stavkaId).set('zah_suma',funded)
+.set('zah_racun_broj',racBr).set('zah_izvod_broj',izvodBr).set('zah_racun_datum',racDatum)
+
+if (personal) sqlNewRequest.set('zah_licno',personal)
+let request
+try{
+request=db.query(sqlNewRequest.toSql())
+}
+catch(e){
+    write('res','err')
+    write('msg','SQL error')
+    write('err', e);
+    exit()
+}
+
+write(request[0].id)
+
+if(racun.length>0){
+        let sqlAdd=`INSERT INTO slike (sli_slika, zah_id, sli_tip) VALUES (?,?,?)`
+        for(let i=0;i<racun.length;i++){
+            if (racun[i].size>400000){
+                write('res', 'err');
+                write('msg', 'Image too big')
+                exit();
+            }
+            try{
+                db.query(sqlAdd,racun[i].data,request[0].id,'рачун')
+            }
+            catch(e){
+                write('res', 'err');
+                write('msg', 'SQL error1')
+                write('err', e);
+                exit();
+            }
+        } 
+    }
+    else{
+        if (racun.size>400000){
+                write('res', 'err');
+                write('msg', 'Image too big')
+                exit();
+            }
+            try{
+                let sqlAdd=`INSERT INTO slike (sli_slika, zah_id, sli_tip) VALUES (?,?,?)`
+                db.query(sqlAdd,racun.data,request[0].id,'рачун')
+            }
+            catch(e){
+                write('res', 'err');
+                write('msg', 'SQL error2')
+                write('err', e);
+                exit();
+            }
+    }
+
+if(izvod.length>0){
+        let sqlAdd=`INSERT INTO slike (sli_slika, zah_id, sli_tip) VALUES (?,?,?)`
+        for(let i=0;i<izvod.length;i++){
+            if (izvod[i].size>400000){
+                write('res', 'err');
+                write('msg', 'Image too big')
+                exit();
+            }
+            try{
+                db.query(sqlAdd,izvod[i].data,request[0].id,'извод')
+            }
+            catch(e){
+                write('res', 'err');
+                write('msg', 'SQL error3')
+                write('err', e);
+                exit();
+            }
+        } 
+    }
+    else{
+        if (izvod.size>400000){
+                write('res', 'err');
+                write('msg', 'Image too big')
+                exit();
+            }
+            try{
+                let sqlAdd=`INSERT INTO slike (sli_slika, zah_id, sli_tip) VALUES (?,?,?)`
+                db.query(sqlAdd,izvod.data,request[0].id,'извод')
+            }
+            catch(e){
+                write('res', 'err');
+                write('msg', 'SQL error4')
+                write('err', e);
+                exit();
+            }
+    }
+
+write('res','ok')
+
+
+
+
+

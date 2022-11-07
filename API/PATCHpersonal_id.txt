@@ -1,0 +1,76 @@
+// let userId = session('id')
+// let isAdmin = session('admin')
+// util.adminCheck(userId,isAdmin)
+// let id = param('id')
+// let errMsg = null
+// let status = param('status', util.requiredParam)
+
+// if (status!=='прихваћено' && status!=='одбијено'){
+//     write('res', 'err')
+//     write('msg', 'Неисправан унос')
+//     exit()
+// }
+
+// let reqCheck = db.select('zah_status, zah_licno, stv_id, stv_ime, stv_kategorija, pro_id')
+//     .from('zahtevi_licno').where('zah_id',id).toSql()
+// let request
+// try{
+// request = db.query(reqCheck)
+// }
+// catch(e){
+//     write('res','err')
+//     write('msg','SQL error1')
+//     write('err', e);
+//     exit()
+// }
+
+// if (request.rows===0){
+//     write('res', 'err')
+//     write('msg', 'Захтев није пронађен')
+//     exit()
+// }
+// request=request[0]
+
+// if (status==="одбијено"){
+//     errMsg=param('errMsg',util.requiredParam)
+// }
+
+// if (status==="прихваћено"){
+//     let sqlInsert = db.insert('stavke').set('stv_ime',request.stv_ime)
+//     .set('stv_kategorija',request.stv_kategorija).set('pro_id',request.pro_id)
+//     .set('parent_id',request.stv_id).set('stv_dobijeno',0).set('stv_licno',request.zah_licno)
+//     .set('stv_potroseno',0).toSql()
+
+//     try{
+//         db.query(sqlInsert)
+//     }
+//     catch(e){
+//         write('res','err')
+//         write('msg','SQL error2')
+//         write('err', e);
+//         exit()
+//     }
+
+// }
+
+// let updateQb = db.update('zahtevi_licno')
+// .set('zah_status',status)
+// .where('zah_id',id)
+
+// if (errMsg) updateQb.set("zah_error",errMsg)
+
+// try{
+// db.query(updateQb.toSql())
+// }
+// catch(e){
+//     write('res','err')
+//     write('msg','SQL error3')
+//     write('err', e);
+//     exit()
+// }
+
+// write('res','ok')
+
+
+
+
